@@ -1,0 +1,45 @@
+{
+  "name": "rabbit-utils",
+  "version": "0.0.0",
+  "description": "A set of utilities over RabbitMQ",
+  "homepage": "http://localhost/rabbit-utils",
+  "author": {
+    "name": "Carles Bruguera",
+    "email": "carlesba@gmail.com",
+    "url": ""
+  },
+  "files": [
+    "lib"
+  ],
+  "main": "lib/index.js",
+  "keywords": [
+    "rabbitmq utils amqp"
+  ],
+  "devDependencies": {
+    "eslint-config-xo-space": "^0.7.0",
+    "gulp": "^3.9.0",
+    "gulp-eslint": "^1.0.0",
+    "gulp-exclude-gitignore": "^1.0.0",
+    "gulp-istanbul": "^0.10.3",
+    "gulp-mocha": "^2.0.0",
+    "gulp-plumber": "^1.0.0",
+    "gulp-nsp": "^2.1.0",
+    "expect": ""
+  },
+  "dependencies": {
+      "amqplib": "",
+      "node-uuid": ""
+  },
+  "eslintConfig": {
+    "extends": "xo-space",
+    "env": {
+      "mocha": true
+    }
+  },
+  "repository": "sunbit/rabbit-utils",
+  "scripts": {
+    "prepublish": "gulp prepublish",
+    "test": "gulp"
+  },
+  "license": "MIT"
+}
