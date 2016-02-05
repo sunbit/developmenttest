@@ -1,5 +1,4 @@
 'use strict';
-/* global console */
 
 var expect = require('expect');
 var testutils = require('./utils.js');
@@ -29,6 +28,12 @@ describe('RabbitMQ Utils', function () {
   describe('RabbitClient instance', function () {
     var client = new rabbitUtils.RabbitClient(TEST_RABBITMQ_URL);
 
+    before(function (done) {
+      testutils.createTestExchanges(TEST_RABBITMQ_URL).then(function () {
+        done();
+      });
+    });
+
     beforeEach(function (done) {
       client = new rabbitUtils.RabbitClient(TEST_RABBITMQ_URL);
       client.connect();
@@ -47,6 +52,14 @@ describe('RabbitMQ Utils', function () {
       expect(client.connection).toExist();
       expect(client.channel).toExist();
     });
+    it('should transform payload into formatted message', function () {
+      var message = client.prepareMessage({field1: 'value'});
+      expect(message).toBeA(Buffer);
+      var parsed = JSON.parse(message.toString());
+      expect(parsed.date).toExist();
+      expect(parsed.source).toEqual(rabbitUtils.Settings.CLIENT_ID);
+      expect(parsed.content.field1).toEqual('value');
+    });
     it('should publish messages', function (done) {
       function publishMessage() {
         client.publish('test', 'Hello world');
@@ -55,31 +68,43 @@ describe('RabbitMQ Utils', function () {
         expect(messages.length).toEqual(1);
         done();
       });
-
     });
     it('should get published messages', function (done) {
       function handleMessage(raw, parsed) {
-        expect(parsed.date).toExist();
         expect(parsed.content).toEqual('Hello world');
         done();
       }
-      client.subscribe('test', handleMessage).then(function() {
+      client.subscribe('test', handleMessage).then(function () {
         client.publish('test', 'Hello world');
       });
-
+    });
+    it('should get only "test.routing" messages', function (done) {
+      function handleMessage(raw, parsed) {
+        expect(parsed.date).toExist();
+        expect(parsed.content).toEqual('Routed message');
+        done();
+      }
+      client.subscribe('test', handleMessage, {routingKey: 'test.routing'}).then(function () {
+        client.publish('test', 'Hello world');
+        client.publish('test', 'Routed message', {routingKey: 'test.routing'});
+      });
     });
     it('should get a response from a rpc', function (done) {
       function sendRPCRequest() {
-        var response = client.rpc('RPC Request', 'my.rpc.endpoint');
-        response.then(function(value) {
-            expect(value.status).toEqual('SUCCESS');
-            expect(value.result.status).toEqual('OK');
-            expect(value.task_id).toExist('task_id');
-            done();
+        var response = client.rpc('my.rpc.endpoint', 'RPC Request');
+        response.then(function (value) {
+          expect(value.status).toEqual('SUCCESS');
+          expect(value.result.status).toEqual('OK');
+          expect(value.task_id).toExist('task_id');
+          done();
         });
-
       }
-      testutils.dummyRPCServer(TEST_RABBITMQ_URL, 'test', 'my.rpc.endpoint', sendRPCRequest);
+      testutils.dummyRPCServer(
+        TEST_RABBITMQ_URL,
+        rabbitUtils.Settings.RPC_EXCHANGE,
+        rabbitUtils.Settings.RPC_RESULTS,
+        'my.rpc.endpoint',
+        sendRPCRequest);
     });
   });
 });
